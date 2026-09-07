@@ -1,26 +1,339 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --text: #0a0a0a;
+  --muted: #6b6b6b;
+  --border: #e4e4e4;
+  --border-strong: #d4d4d4;
+  --dark: #0a0a0a;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* type scale — one source of truth, smallest to largest */
+  --text-micro: 10px; /* AI/MANUAL tags, inline mono badges */
+  --text-label: 11px; /* section labels, field labels, table headers */
+  --text-card-title: 12px; /* Card title */
+  --text-table: 13px; /* table cell */
+  --text-body: 14px; /* body copy, inputs */
+  --text-title: 20px; /* page title */
+
+  /* spacing scale — 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.4;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .card-title {
+    font-size: var(--text-card-title);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text);
+  }
+
+  .label-xs {
+    font-size: var(--text-label);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  .input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: var(--text-body);
+    color: var(--text);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--text);
+  }
+
+  .input::placeholder {
+    color: #a3a3a3;
+  }
+
+  .input:disabled {
+    background: #f2f2f2;
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .btn-md {
+    padding: 8px 14px;
+    font-size: var(--text-body);
+  }
+
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: var(--text-table);
+  }
+
+  .btn-primary {
+    background: var(--dark);
+    color: #fff;
+    border-color: var(--dark);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #222;
+  }
+
+  .btn-primary:active:not(:disabled) {
+    background: #000;
+  }
+
+  .btn-primary:disabled {
+    background: var(--border-strong);
+    border-color: var(--border-strong);
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: #f2f2f2;
+  }
+
+  .btn-secondary:active:not(:disabled) {
+    background: #e8e8e8;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: transparent;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: #f2f2f2;
+  }
+
+  .btn-ghost:active:not(:disabled) {
+    background: #e8e8e8;
+  }
+
+  .btn-danger {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--text);
+    font-weight: 500;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: var(--text);
+    color: var(--surface);
+  }
+
+  .btn-danger:active:not(:disabled) {
+    background: #000;
+    border-color: #000;
+    color: var(--surface);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: var(--text-label);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .pill-dark {
+    background: var(--dark);
+    color: #fff;
+    border-color: var(--dark);
+  }
+
+  .pill-muted {
+    background: #ededed;
+    color: var(--muted);
+    border-color: #ededed;
+  }
+
+  .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-table);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tbl th {
+    text-align: left;
+    font-size: var(--text-label);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 2px solid var(--border-strong);
+  }
+
+  .tbl td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tbl th:first-child,
+  .tbl td:first-child {
+    padding-left: var(--space-4);
+  }
+
+  .tbl th:last-child,
+  .tbl td:last-child {
+    padding-right: var(--space-4);
+  }
+
+  .tbl tr:last-child td {
+    border-bottom: none;
+  }
+
+  .tbl tbody tr:hover td {
+    background: #f6f6f6;
+  }
+
+  .login-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+}
+
+@keyframes flash-in {
+  0% {
+    background-color: #e4e4e4;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.flash-in {
+  animation: flash-in 1s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-in {
+    animation: none;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .rx-sheet,
+  .rx-sheet * {
+    visibility: visible;
+  }
+  .rx-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    padding: 14mm !important;
+  }
+  .rx-sheet input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/*
+ * Suppressing Chrome's injected header/footer (URL, date, page number)
+ * depends on the user's "Headers and footers" checkbox in the print
+ * dialog; margin: 0 is what makes Chrome omit it by default. The page's
+ * own white margin is recreated as padding on .rx-sheet above instead.
+ */
+@page {
+  margin: 0;
 }

@@ -1,0 +1,195 @@
+# Essential drug list — India PHC / WHO EML subset. One generic per line.
+# Used for fuzzy matching of mis-heard drug names from STT output.
+Paracetamol
+Ibuprofen
+Diclofenac
+Aceclofenac
+Aspirin
+Tramadol
+Amoxicillin
+Amoxicillin-Clavulanate
+Ampicillin
+Azithromycin
+Cefixime
+Cefuroxime
+Ceftriaxone
+Cephalexin
+Ciprofloxacin
+Levofloxacin
+Ofloxacin
+Norfloxacin
+Doxycycline
+Metronidazole
+Nitrofurantoin
+Cotrimoxazole
+Clarithromycin
+Erythromycin
+Gentamicin
+Rifampicin
+Isoniazid
+Pyrazinamide
+Ethambutol
+Fluconazole
+Ketoconazole
+Clotrimazole
+Griseofulvin
+Albendazole
+Mebendazole
+Ivermectin
+Chloroquine
+Hydroxychloroquine
+Artemether-Lumefantrine
+Primaquine
+Acyclovir
+Oseltamivir
+Cetirizine
+Levocetirizine
+Loratadine
+Fexofenadine
+Chlorpheniramine
+Montelukast
+Salbutamol
+Levosalbutamol
+Ipratropium
+Budesonide
+Formoterol
+Theophylline
+Prednisolone
+Dexamethasone
+Hydrocortisone
+Betamethasone
+Omeprazole
+Pantoprazole
+Esomeprazole
+Rabeprazole
+Ranitidine
+Famotidine
+Domperidone
+Ondansetron
+Metoclopramide
+Sucralfate
+Antacid Gel
+Lactulose
+Bisacodyl
+Ispaghula Husk
+Loperamide
+ORS
+Zinc Sulphate
+Dicyclomine
+Drotaverine
+Mebeverine
+Amlodipine
+Nifedipine
+Atenolol
+Metoprolol
+Propranolol
+Carvedilol
+Enalapril
+Ramipril
+Lisinopril
+Telmisartan
+Losartan
+Olmesartan
+Hydrochlorothiazide
+Chlorthalidone
+Furosemide
+Spironolactone
+Torsemide
+Atorvastatin
+Rosuvastatin
+Simvastatin
+Fenofibrate
+Clopidogrel
+Warfarin
+Heparin
+Metformin
+Glimepiride
+Gliclazide
+Glibenclamide
+Sitagliptin
+Vildagliptin
+Pioglitazone
+Insulin Human
+Insulin Glargine
+Levothyroxine
+Carbimazole
+Methimazole
+Iron and Folic Acid
+Ferrous Sulphate
+Folic Acid
+Vitamin B Complex
+Vitamin B12
+Vitamin C
+Vitamin D3
+Calcium Carbonate
+Calcium with Vitamin D3
+Multivitamin
+Amitriptyline
+Fluoxetine
+Sertraline
+Escitalopram
+Alprazolam
+Clonazepam
+Diazepam
+Lorazepam
+Phenytoin
+Carbamazepine
+Valproate
+Levetiracetam
+Phenobarbitone
+Haloperidol
+Olanzapine
+Risperidone
+Chlorpromazine
+Lithium Carbonate
+Sumatriptan
+Flunarizine
+Betahistine
+Prochlorperazine
+Cinnarizine
+Baclofen
+Tizanidine
+Thiocolchicoside
+Methylcobalamin
+Pregabalin
+Gabapentin
+Silver Sulphadiazine
+Povidone Iodine
+Mupirocin
+Fusidic Acid
+Neomycin
+Calamine Lotion
+Permethrin
+Benzyl Benzoate
+Hydrogen Peroxide
+Xylometazoline
+Oxymetazoline
+Saline Nasal Drops
+Chloramphenicol Eye Drops
+Tobramycin Eye Drops
+Carboxymethylcellulose Eye Drops
+Timolol Eye Drops
+Ciprofloxacin Ear Drops
+Tetanus Toxoid
+Misoprostol
+Mifepristone
+Oxytocin
+Methylergometrine
+Tranexamic Acid
+Medroxyprogesterone
+Norethisterone
+Combined Oral Contraceptive
+Sildenafil
+Tamsulosin
+Finasteride
+Allopurinol
+Febuxostat
+Colchicine
+Ursodeoxycholic Acid
+Alpha Ketoanalogues
+Potassium Chloride
+Sodium Bicarbonate
+Magnesium Sulphate
+Dextrose
+Normal Saline
+Ringer Lactate
