@@ -5,6 +5,50 @@ export function llmEnabled(): boolean {
   return process.env.LLM_ENABLED === 'true'
 }
 
+// ---------------------------------------------------------------------------
+// Unified config for any OpenAI-compatible backend: local Ollama OR a
+// hosted gateway such as Vercel AI Gateway (https://ai-gateway.vercel.sh/v1).
+// Switching is purely via environment variables — no code changes needed.
+// ---------------------------------------------------------------------------
+
+export function llmApiKey(): string {
+  return (
+    process.env.LLM_API_KEY ||
+    process.env.AI_GATEWAY_API_KEY ||
+    process.env.VERCEL_OIDC_TOKEN ||
+    ''
+  ).trim()
+}
+
+export function llmBaseUrl(): string {
+  return (process.env.LLM_BASE_URL || 'http://localhost:11434/v1').trim()
+}
+
+export function llmModel(): string {
+  return (process.env.LLM_MODEL || '').trim()
+}
+
+/** 'ollama' sends the Ollama-native `format` field; 'openai' speaks pure OpenAI. */
+export function llmProvider(): 'ollama' | 'openai' {
+  const explicit = (process.env.LLM_PROVIDER || '').toLowerCase().trim()
+  if (explicit === 'ollama') return 'ollama'
+  if (explicit === 'openai' || explicit === 'gateway' || explicit === 'vercel') return 'openai'
+
+  const key = llmApiKey()
+  if (key) return 'openai' // a key implies a hosted gateway / OpenAI-compatible cloud
+
+  const url = llmBaseUrl().toLowerCase()
+  if (/localhost|127\.0\.0\.1|0\.0\.0\.0|11434|ollama/.test(url)) return 'ollama'
+  return 'openai'
+}
+
+export function llmHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const key = llmApiKey()
+  if (key) headers['Authorization'] = `Bearer ${key}`
+  return headers
+}
+
 const CATEGORIES = new Set(['symptom', 'finding', 'vital', 'assessment', 'other'])
 const VITAL_KEYS = ['bp', 'temp', 'pulse', 'weight', 'spo2'] as const
 
@@ -128,8 +172,13 @@ export async function structureTranscript(
   transcript: string,
   existing: { diagnosis: DiagnosisItem[]; prescription: PrescriptionItem[]; vitals: Vitals }
 ): Promise<StructuredResult | null> {
-  const baseUrl = process.env.LLM_BASE_URL || 'http://localhost:11434/v1'
-  const model = process.env.LLM_MODEL
+  const baseUrl = llmBaseUrl()
+  const model = llmModel()
+  const provider = llmProvider()
+  if (!model) {
+    console.warn('llm: LLM_MODEL not set')
+    return null
+  }
   const userMsg = `EXISTING: ${JSON.stringify({
     diagnosis: existing.diagnosis.map((d) => d.text),
     prescription: existing.prescription.map((p) => p.drug),
@@ -138,22 +187,25 @@ export async function structureTranscript(
 
   let res: Response
   try {
+    const body: Record<string, unknown> = {
+      model,
+      stream: false,
+      temperature: 0,
+      // OpenAI-compatible servers (incl. Vercel AI Gateway) use response_format.
+      response_format: { type: 'json_schema', json_schema: { name: 'visit_structure', schema: RESPONSE_SCHEMA, strict: true } },
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMsg },
+      ],
+    }
+    // Ollama's native `/chat/completions` compatibility layer also honours a top-level `format`.
+    // Only send it to Ollama — hosted OpenAI-compatible servers reject unknown fields.
+    if (provider === 'ollama') body.format = RESPONSE_SCHEMA
+
     res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        temperature: 0,
-        // OpenAI-compatible servers read response_format.json_schema; Ollama reads a
-        // top-level `format` with the same schema — send both, each server ignores the field it doesn't know.
-        response_format: { type: 'json_schema', json_schema: { name: 'visit_structure', schema: RESPONSE_SCHEMA, strict: true } },
-        format: RESPONSE_SCHEMA,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userMsg },
-        ],
-      }),
+      headers: llmHeaders(),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(60000),
     })
   } catch (err) {

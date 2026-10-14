@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getSession } from '@/lib/auth'
 import { patients, visits } from '@/lib/db'
 import { serializeDoc, serializeDocs } from '@/lib/types'
@@ -16,7 +17,7 @@ async function getPatient(id: string) {
     return null
   }
   const doc = await (await patients()).findOne({ _id })
-  return doc ? serializeDoc<Patient>(doc) : null
+  return doc ? serializeDoc<Patient & { email?: string }>(doc) : null
 }
 
 async function getVisits(id: string) {
@@ -35,12 +36,21 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
 
   return (
     <Shell role="reception" user={session} title="Patient">
+      {/* Breadcrumb */}
+      <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--muted)' }}>
+        <Link href="/reception/patients" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
+          ← All patients
+        </Link>
+      </div>
+
       <div className="mb-6">
         <h1 className="text-[20px] font-semibold">{patient.name}</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
           <span className="font-mono">{patient.mrn}</span> · {patient.age}/{patient.sex}
+          {patient.phone && <> · <span className="font-mono">{patient.phone}</span></>}
         </p>
       </div>
+
       <div className="grid grid-cols-[380px_1fr] gap-6 items-start">
         <div className="flex flex-col gap-4">
           <Card title="Patient details">
@@ -53,6 +63,12 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                 <dt className="text-[var(--muted)]">Address</dt>
                 <dd>{patient.address || '—'}</dd>
               </div>
+              {(patient as { email?: string }).email && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--muted)]">Email</dt>
+                  <dd className="font-mono text-[12px]">{(patient as { email?: string }).email}</dd>
+                </div>
+              )}
             </dl>
             {patient.allergies && (
               <div className="mt-3 border border-[var(--border-strong)] rounded px-3 py-2">
@@ -61,8 +77,12 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </Card>
-          <StartVisit patientId={patient._id} />
+          <StartVisit
+            patientId={patient._id}
+            patientEmail={(patient as { email?: string }).email}
+          />
         </div>
+
         <Card title="Visit history">
           {patientVisits.length === 0 ? (
             <EmptyState title="No previous visits." />

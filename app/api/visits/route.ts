@@ -1,8 +1,9 @@
 import { ObjectId } from 'mongodb'
 import { guard, jsonError } from '@/lib/auth'
-import { patients, visits } from '@/lib/db'
-import { serializeDoc } from '@/lib/types'
-import type { Patient, Vitals, Visit } from '@/lib/types'
+import { patients, visits, users } from '@/lib/db'
+import { serializeDoc, serializeDocs } from '@/lib/types'
+import { sendAppointmentEmail } from '@/lib/email'
+import type { Patient, Vitals, Visit, User } from '@/lib/types'
 
 function startOfToday(): Date {
   const d = new Date()
@@ -10,6 +11,12 @@ function startOfToday(): Date {
   return d
 }
 
+/**
+ * POST /api/visits
+ * Extended to support:
+ *   - doctorId (optional, assigns directly)
+ *   - patientEmail (optional, triggers appointment email)
+ */
 export async function GET(req: Request) {
   return guard([], async () => {
     const { searchParams } = new URL(req.url)
@@ -37,8 +44,6 @@ export async function GET(req: Request) {
       : []
     const patientMap = new Map(patientDocs.map((p) => [String(p._id), serializeDoc<Patient>(p)]))
 
-    // a visit whose patient no longer exists is unusable in every consumer — drop it
-    // rather than emit `patient: null` for the UI to dereference
     const result = visitDocs.flatMap((v) => {
       const patient = patientMap.get(String(v.patientId))
       return patient ? [{ ...serializeDoc<Visit>(v), patient }] : []
@@ -54,6 +59,8 @@ export async function POST(req: Request) {
     const patientId = String(body.patientId ?? '')
     const reason = String(body.reason ?? '').trim()
     const vitals: Vitals = body.vitals ?? {}
+    const assignedDoctorId = body.doctorId ? String(body.doctorId) : null
+    const patientEmail = body.patientEmail ? String(body.patientEmail).trim() : null
 
     if (!patientId) throw jsonError('patientId is required', 400)
     if (!reason) throw jsonError('Reason is required', 400)
@@ -75,9 +82,14 @@ export async function POST(req: Request) {
     })
     if (existing) throw jsonError('This patient already has an open visit today.', 409)
 
+    // Count today's visits to determine token number
+    const todayCount = await visitsCol.countDocuments({ createdAt: { $gte: startOfToday() } })
+    const tokenNumber = todayCount + 1
+
+    const now = new Date()
     const doc = {
       patientId,
-      doctorId: null,
+      doctorId: assignedDoctorId,
       status: 'waiting' as const,
       reason,
       vitals,
@@ -86,11 +98,47 @@ export async function POST(req: Request) {
       transcript: [],
       notes: '',
       createdBy: session.uid,
-      createdAt: new Date(),
+      createdAt: now,
       startedAt: null,
       completedAt: null,
     }
     const res = await visitsCol.insertOne(doc)
-    return { visit: serializeDoc<Visit>({ ...doc, _id: res.insertedId }) }
+    const visitId = String(res.insertedId)
+    const visit = serializeDoc<Visit>({ ...doc, _id: res.insertedId })
+
+    // Resolve doctor details for email
+    let doctorName = 'To be assigned'
+    let doctorDepartment: string | undefined
+    if (assignedDoctorId) {
+      try {
+        const doctorDoc = await (await users()).findOne({ _id: new ObjectId(assignedDoctorId) })
+        if (doctorDoc) {
+          const doctor = serializeDoc<User>(doctorDoc)
+          doctorName = doctor.name
+          doctorDepartment = doctor.department
+        }
+      } catch { /* ignore */ }
+    }
+
+    const patient = serializeDoc<Patient>(patientDoc)
+
+    // Send email if patient email provided
+    let emailStatus: { sent: boolean; error?: string } = { sent: false }
+    const emailAddr = patientEmail || (patientDoc.email as string | undefined)
+    if (emailAddr) {
+      emailStatus = await sendAppointmentEmail({
+        to: emailAddr,
+        patientName: patient.name,
+        mrn: patient.mrn,
+        visitId,
+        tokenNumber,
+        doctorName,
+        doctorDepartment,
+        reason,
+        appointmentTime: now.toISOString(),
+      }).catch((err) => ({ sent: false, error: String(err) }))
+    }
+
+    return { visit, tokenNumber, emailStatus }
   })
 }

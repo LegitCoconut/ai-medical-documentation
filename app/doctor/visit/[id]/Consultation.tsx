@@ -8,6 +8,7 @@ import { HistoryRail } from './HistoryRail'
 import { DiagnosisPanel } from './DiagnosisPanel'
 import { DictationPanel, type StructureResult } from './DictationPanel'
 import { PrescriptionSheet } from './PrescriptionSheet'
+import { PatientSummaryChat } from './PatientSummaryChat'
 
 export type HistoryVisit = Visit & { doctorName: string }
 
@@ -166,7 +167,7 @@ export function Consultation({
         </div>
       )}
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(620px,1.4fr)_340px_320px] gap-4">
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(560px,1.4fr)_300px_300px_300px] gap-4">
         <div className="min-h-0 overflow-y-auto py-6 px-2">
           <PrescriptionSheet
             patient={patient}
@@ -206,6 +207,10 @@ export function Consultation({
             initialTranscript={visit.transcript}
             onStructured={handleStructured}
           />
+        </div>
+
+        <div className="min-h-0 no-print">
+          <PatientSummaryChat patientId={patient._id} />
         </div>
       </div>
     </div>
