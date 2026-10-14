@@ -27,7 +27,7 @@ export function PatientTable({ initialPatients }: { initialPatients: Patient[] }
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
-    let list = query
+    const list = query
       ? initialPatients.filter(
           (p) =>
             p.name.toLowerCase().includes(query) ||

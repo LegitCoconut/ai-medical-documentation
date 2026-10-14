@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Textarea } from '@/components/ui'
 import type { DiagnosisItem, PrescriptionItem, Vitals } from '@/lib/types'
 
-type Chunk = { id: string; text: string; at: string }
 type Mode = 'whisper' | 'browser' | 'text'
 
 export type StructureResult = {
@@ -65,7 +64,7 @@ export function DictationPanel({
   onStructured,
 }: {
   visitId: string
-  initialTranscript: Chunk[]
+  initialTranscript: { id: string; text: string; at: string | Date }[]
   onStructured: (result: StructureResult) => void
 }) {
   const [mode, setMode] = useState<Mode>('whisper')
@@ -76,7 +75,9 @@ export function DictationPanel({
   const [transcribing, setTranscribing] = useState(false)
   const [interimText, setInterimText] = useState('')
   const [textDraft, setTextDraft] = useState('')
-  const [chunks, setChunks] = useState<Chunk[]>(initialTranscript)
+  const [transcriptText, setTranscriptText] = useState(() =>
+    (initialTranscript ?? []).map((c) => c.text).join('\n')
+  )
   const [error, setError] = useState('')
   const [summary, setSummary] = useState<{ text: string; source: StructureResult['source'] } | null>(null)
   // Whisper recording state
@@ -87,7 +88,6 @@ export function DictationPanel({
   const audioChunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const logRef = useRef<HTMLDivElement | null>(null)
   const summaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -102,9 +102,7 @@ export function DictationPanel({
     }
   }, [])
 
-  useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
-  }, [chunks, interimText])
+  // no auto-scroll needed now; transcript is an editable text area
 
   // Cleanup on unmount
   useEffect(() => () => {
@@ -114,10 +112,10 @@ export function DictationPanel({
     if (timerRef.current) clearInterval(timerRef.current)
   }, [])
 
-  function appendChunk(text: string) {
+  function addToTranscript(text: string) {
     const trimmed = text.trim()
     if (!trimmed) return
-    setChunks((prev) => [...prev, { id: crypto.randomUUID(), text: trimmed, at: new Date().toISOString() }])
+    setTranscriptText((prev) => (prev.trim() ? `${prev.trimEnd()}\n${trimmed}` : trimmed))
   }
 
   function showSummary(data: StructureResult) {
@@ -167,7 +165,7 @@ export function DictationPanel({
         setTranscribing(true)
         try {
           const text = await transcribeBlob(blob)
-          if (text) appendChunk(text)
+          if (text) addToTranscript(text)
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Transcription failed.')
         } finally {
@@ -194,7 +192,7 @@ export function DictationPanel({
         let interim = ''
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const res = e.results[i]
-          if (res.isFinal) appendChunk(res[0].transcript)
+          if (res.isFinal) addToTranscript(res[0].transcript)
           else interim += res[0].transcript
         }
         setInterimText(interim)
@@ -212,16 +210,13 @@ export function DictationPanel({
     setLive(true)
   }
 
-  // ─── Stop ─────────────────────────────────────────────────────────────────
-  async function handleStop() {
+  // ─── Stop (does NOT generate; leaves transcript editable) ────────────────
+  function handleStop() {
     if (structuring) return
-
-    let pending = chunks
 
     if (mode === 'whisper') {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
       setRecordingSeconds(0)
-      // Stop recorder — transcription happens in onstop
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop()
         mediaRecorderRef.current = null
@@ -235,40 +230,20 @@ export function DictationPanel({
     } else {
       const trimmed = textDraft.trim()
       if (trimmed) {
-        pending = [...chunks, { id: crypto.randomUUID(), text: trimmed, at: new Date().toISOString() }]
-        setChunks(pending)
+        addToTranscript(trimmed)
         setTextDraft('')
       }
     }
 
     setLive(false)
-
-    // For Whisper we wait for transcription before structuring — do it after a short delay
-    // so the onstop callback can fire and append chunks first
-    if (mode === 'whisper') {
-      // The structuring will be triggered after transcription in the useEffect below
-      // We set a flag and let the component handle it
-      pendingStructureRef.current = true
-      return
-    }
-
-    await runStructure(pending)
   }
 
-  // We need to run structuring after Whisper transcription completes
-  const pendingStructureRef = useRef(false)
-
-  useEffect(() => {
-    if (pendingStructureRef.current && !transcribing) {
-      pendingStructureRef.current = false
-      runStructure(chunks)
+  async function runStructure() {
+    const transcript = transcriptText.trim()
+    if (!transcript) {
+      setError('Add some transcript text first.')
+      return
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcribing])
-
-  async function runStructure(pending: Chunk[]) {
-    const transcript = pending.map((c) => c.text).join('\n')
-    if (!transcript.trim()) return
 
     setStructuring(true)
     setError('')
@@ -283,7 +258,7 @@ export function DictationPanel({
       onStructured(data)
       showSummary(data)
     } catch {
-      setError('Structuring failed — press Stop to retry. Your transcript is safe.')
+      setError('Generation failed — check your transcript and try again. Your transcript is safe.')
     } finally {
       setStructuring(false)
     }
@@ -292,7 +267,7 @@ export function DictationPanel({
   function submitTextChunk() {
     if (!live) return
     if (!textDraft.trim()) return
-    appendChunk(textDraft)
+    addToTranscript(textDraft)
     setTextDraft('')
   }
 
@@ -308,21 +283,14 @@ export function DictationPanel({
   return (
     <div className="flex flex-col h-full">
       <h3 className="label-xs mb-2">Live transcript</h3>
-      <div ref={logRef} className="flex-1 min-h-0 overflow-y-auto border border-[var(--border)] rounded p-2 mb-2 bg-[var(--surface)]">
-        {chunks.length === 0 && !interimText ? (
-          <p className="text-sm text-[var(--muted)]">Nothing heard yet.</p>
-        ) : (
-          <div className="font-mono text-[12px] leading-[1.6]">
-            {chunks.map((c) => (
-              <div key={c.id}>
-                <span className="text-[var(--muted)]">{new Date(c.at).toLocaleTimeString('en-GB', { hour12: false })}</span>{' '}
-                {c.text}
-              </div>
-            ))}
-            {interimText && <div className="italic text-[var(--muted)]">{interimText}</div>}
-          </div>
-        )}
-      </div>
+      <Textarea
+        value={transcriptText}
+        onChange={(e) => setTranscriptText(e.target.value)}
+        rows={8}
+        placeholder="Live transcript appears here. You can edit or paste text. Click “Generate prescription” when ready."
+        className="flex-1 min-h-0 mb-2 font-mono text-[12px]"
+      />
+      {interimText && <div className="italic text-[11px] text-[var(--muted)] mb-2">{interimText}</div>}
 
       {/* Status bar */}
       <div className="flex items-center gap-2 text-[11px] text-[var(--muted)] mb-3 min-h-4">
@@ -353,6 +321,16 @@ export function DictationPanel({
       </div>
 
       {error && <p className="text-[11px] text-[var(--muted)] mb-2">{error}</p>}
+
+      <Button
+        id="generate-prescription-btn"
+        variant="primary"
+        className="w-full mb-3"
+        disabled={isBusy || live || !transcriptText.trim()}
+        onClick={runStructure}
+      >
+        {structuring ? 'Generating prescription…' : 'Create prescription'}
+      </Button>
 
       {/* Mode selector */}
       <div className="flex border border-[var(--border-strong)] rounded overflow-hidden mb-3 text-sm">
