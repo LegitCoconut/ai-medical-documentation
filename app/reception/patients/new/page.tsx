@@ -9,8 +9,10 @@ export default async function NewPatientPage() {
 
   return (
     <Shell role="reception" user={session} title="Register patient">
-      <PageHeader title="Register patient" />
-      <NewPatientForm />
+      <div className="max-w-[720px] mx-auto">
+        <PageHeader title="Register patient" />
+        <NewPatientForm />
+      </div>
     </Shell>
   )
 }

@@ -21,6 +21,13 @@ const navByRole: Record<Role, NavItem[]> = {
   ],
 }
 
+// navbar bar / active-tab / role-label colours per role
+const themeByRole: Record<Role, { bar: string; active: string; label: string }> = {
+  admin: { bar: 'bg-gradient-to-r from-indigo-900 to-violet-800', active: 'bg-violet-500', label: '!text-violet-200' },
+  doctor: { bar: 'bg-gradient-to-r from-teal-900 to-emerald-800', active: 'bg-emerald-500', label: '!text-emerald-200' },
+  reception: { bar: 'bg-gradient-to-r from-sky-900 to-blue-800', active: 'bg-sky-500', label: '!text-sky-200' },
+}
+
 function SignOutButton() {
   const router = useRouter()
   async function signOut() {
@@ -28,7 +35,7 @@ function SignOutButton() {
     router.push('/login')
   }
   return (
-    <Button variant="ghost" size="sm" onClick={signOut}>
+    <Button variant="ghost" size="sm" className="!text-white hover:!bg-white/10" onClick={signOut}>
       Sign out
     </Button>
   )
@@ -47,17 +54,18 @@ export function Shell({
 }) {
   const pathname = usePathname()
   const items = navByRole[role]
+  const theme = themeByRole[role]
   const activeHref = items
     .filter((i) => pathname === i.href || pathname.startsWith(i.href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-20 h-14 shrink-0 bg-[var(--surface)] border-b border-[var(--border)] flex items-center gap-5 px-6 overflow-x-auto">
+      <header className={`sticky top-0 z-20 h-14 shrink-0 ${theme.bar} text-white shadow-md flex items-center gap-5 px-6 overflow-x-auto`}>
         <span className="text-[13px] font-semibold tracking-[0.18em] uppercase whitespace-nowrap shrink-0">
           PHC Consult
         </span>
-        <span className="h-5 w-px bg-[var(--border)] shrink-0" />
+        <span className="h-5 w-px bg-white/25 shrink-0" />
         <nav className="flex items-center gap-1 whitespace-nowrap shrink-0">
           {items.map((item) => {
             const active = item.href === activeHref
@@ -67,8 +75,8 @@ export function Shell({
                 href={item.href}
                 className={`px-3 py-1.5 rounded text-[13px] font-medium ${
                   active
-                    ? 'bg-[var(--text)] text-white'
-                    : 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[#f2f2f2]'
+                    ? `${theme.active} text-white`
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {item.label}
@@ -78,9 +86,9 @@ export function Shell({
         </nav>
         <div className="flex-1" />
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-baseline gap-1.5 pr-3 border-r border-[var(--border)]">
+          <div className="flex items-baseline gap-1.5 pr-3 border-r border-white/25">
             <span className="text-[13px] font-medium">{user.name}</span>
-            <span className="label-xs">{role}</span>
+            <span className={`label-xs ${theme.label}`}>{role}</span>
           </div>
           <SignOutButton />
         </div>

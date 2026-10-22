@@ -58,7 +58,7 @@ export function NewPatientForm() {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-[720px]">
+    <form onSubmit={submit}>
       {serverError && (
         <div className="mb-4 bg-[#f4f4f4] border-l-2 border-black px-3 py-2 text-sm">
           {serverError}

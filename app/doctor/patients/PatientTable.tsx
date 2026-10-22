@@ -14,10 +14,13 @@ function formatDMY(iso: string): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 }
 
-function prescriptionLabel(visit: Visit): string {
-  const names = visit.prescription.map((rx) => rx.drug || '—')
-  const shown = names.slice(0, 2).join(', ')
-  return names.length > 2 ? `${shown} +${names.length - 2} more` : shown
+function Avatar({ name, sex }: { name: string; sex: string }) {
+  const tone = sex === 'F' ? 'bg-rose-100 text-rose-700' : sex === 'M' ? 'bg-sky-100 text-sky-700' : 'bg-violet-100 text-violet-700'
+  return (
+    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${tone}`}>
+      {name.trim().slice(0, 1).toUpperCase()}
+    </span>
+  )
 }
 
 function resolveDoctor(doctorId: string | null, map: Record<string, DoctorInfo>): DoctorInfo {
@@ -59,7 +62,7 @@ export function PatientTable({
         placeholder="Search by name, MRN or phone"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        className="max-w-sm mb-4"
+        className="max-w-sm mb-4 !rounded-full !pl-4"
       />
       {patients.length === 0 && <EmptyState title="No patients registered yet." />}
       {patients.length > 0 && filtered.length === 0 && (
@@ -88,7 +91,7 @@ export function PatientTable({
                   <tr
                     key={p._id}
                     tabIndex={0}
-                    className="cursor-pointer hover:bg-[#f7f7f7]"
+                    className="cursor-pointer hover:bg-teal-50/70 transition-colors"
                     onClick={() => router.push(href)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') router.push(href)
@@ -97,15 +100,20 @@ export function PatientTable({
                     <Td>
                       <Link
                         href={href}
-                        className="font-mono hover:underline"
+                        className="font-mono text-[12px] rounded-md bg-teal-50 text-teal-800 px-2 py-0.5 hover:bg-teal-100"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {p.mrn}
                       </Link>
                     </Td>
-                    <Td>{p.name}</Td>
                     <Td>
-                      {p.age} / {p.sex}
+                      <div className="flex items-center gap-3">
+                        <Avatar name={p.name} sex={p.sex} />
+                        <span className="font-medium">{p.name}</span>
+                      </div>
+                    </Td>
+                    <Td>
+                      <span className="text-[var(--muted)]">{p.age} yrs · {p.sex}</span>
                     </Td>
                     <Td>
                       <span className="font-mono">{p.phone}</span>
@@ -118,7 +126,9 @@ export function PatientTable({
                       )}
                     </Td>
                     <Td>
-                      <span className="font-mono">{visitCounts[p._id] ?? 0}</span>
+                      <span className="inline-flex min-w-6 justify-center rounded-full bg-teal-100 text-teal-800 px-2 py-0.5 text-[12px] font-semibold">
+                        {visitCounts[p._id] ?? 0}
+                      </span>
                     </Td>
                     <Td>
                       {!rxVisit && (
@@ -128,13 +138,20 @@ export function PatientTable({
                       )}
                       {rxVisit && (
                         <button
-                          className="hover:underline text-left"
+                          className="text-left flex flex-wrap items-center gap-1.5 hover:opacity-80"
                           onClick={(e) => {
                             e.stopPropagation()
                             setDialogFor({ patient: p, visit: rxVisit })
                           }}
                         >
-                          {prescriptionLabel(rxVisit)}
+                          {rxVisit.prescription.slice(0, 2).map((rx, i) => (
+                            <span key={i} className="rounded-md bg-emerald-50 text-emerald-800 border border-emerald-100 px-2 py-0.5 text-[12px]">
+                              {rx.drug || '—'}
+                            </span>
+                          ))}
+                          {rxVisit.prescription.length > 2 && (
+                            <span className="text-[12px] text-[var(--muted)]">+{rxVisit.prescription.length - 2} more</span>
+                          )}
                           {rxVisit._id !== visit?._id && (
                             <span className="text-[var(--muted)] font-mono text-[11px] ml-2">
                               {formatDMY(rxVisit.createdAt)}

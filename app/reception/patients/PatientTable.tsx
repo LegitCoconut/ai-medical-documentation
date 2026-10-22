@@ -20,6 +20,15 @@ function highlight(text: string, q: string): React.ReactNode {
   )
 }
 
+function Avatar({ name, sex }: { name: string; sex: string }) {
+  const tone = sex === 'F' ? 'bg-rose-100 text-rose-700' : sex === 'M' ? 'bg-sky-100 text-sky-700' : 'bg-violet-100 text-violet-700'
+  return (
+    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${tone}`}>
+      {name.trim().slice(0, 1).toUpperCase()}
+    </span>
+  )
+}
+
 export function PatientTable({ initialPatients }: { initialPatients: Patient[] }) {
   const [q, setQ] = useState('')
   const [sortKey, setSortKey] = useState<'name' | 'mrn' | 'age' | 'createdAt'>('createdAt')
@@ -68,6 +77,7 @@ export function PatientTable({ initialPatients }: { initialPatients: Patient[] }
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name, MRN or phone…"
+          className="!rounded-full !pl-4"
           autoFocus
         />
       </div>
@@ -118,18 +128,21 @@ export function PatientTable({ initialPatients }: { initialPatients: Patient[] }
                   <tr
                     key={p._id}
                     style={{ cursor: 'pointer' }}
-                    className="hover:bg-[#f7f7f7]"
+                    className="hover:bg-sky-50/70 transition-colors"
                   >
                     <td>
-                      <span className="font-mono text-[12px]">
+                      <span className="font-mono text-[12px] whitespace-nowrap rounded-md bg-sky-50 text-sky-800 px-2 py-0.5">
                         {highlight(p.mrn, q)}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>
-                      {highlight(p.name, q)}
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={p.name} sex={p.sex} />
+                        <span className="font-medium">{highlight(p.name, q)}</span>
+                      </div>
                     </td>
-                    <td className="font-mono text-[12px]">
-                      {p.age}/{p.sex}
+                    <td className="text-[var(--muted)] whitespace-nowrap">
+                      {p.age} yrs · {p.sex}
                     </td>
                     <td>
                       <span className="font-mono text-[12px] text-[var(--muted)]">
@@ -142,14 +155,7 @@ export function PatientTable({ initialPatients }: { initialPatients: Patient[] }
                     <td>
                       {p.allergies ? (
                         <span
-                          style={{
-                            fontSize: 11,
-                            padding: '2px 6px',
-                            background: '#fef9c3',
-                            border: '1px solid #fde68a',
-                            borderRadius: 4,
-                            color: '#78350f',
-                          }}
+                          className="whitespace-nowrap rounded-md bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 text-[12px]"
                         >
                           {p.allergies}
                         </span>
