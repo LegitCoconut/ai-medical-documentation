@@ -49,6 +49,49 @@ export function llmHeaders(): Record<string, string> {
   return headers
 }
 
+export type LlmBackend = { baseUrl: string; model: string; headers: Record<string, string>; provider: 'ollama' | 'openai' }
+
+/** Primary backend (LLM_*) first, then an online fallback (LLM_FALLBACK_*) if configured. */
+export function llmBackends(): LlmBackend[] {
+  const list: LlmBackend[] = []
+  if (llmModel()) {
+    list.push({ baseUrl: llmBaseUrl(), model: llmModel(), headers: llmHeaders(), provider: llmProvider() })
+  }
+  const fbModel = (process.env.LLM_FALLBACK_MODEL || '').trim()
+  const fbKey = (process.env.LLM_FALLBACK_API_KEY || '').trim()
+  if (fbModel && fbKey) {
+    list.push({
+      baseUrl: (process.env.LLM_FALLBACK_BASE_URL || 'https://ai-gateway.vercel.sh/v1').trim(),
+      model: fbModel,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${fbKey}` },
+      provider: 'openai',
+    })
+  }
+  return list
+}
+
+/** POST /chat/completions to each backend in order; returns the first OK response, or null. */
+export async function llmChat(
+  build: (b: LlmBackend) => Record<string, unknown>,
+  timeoutMs: number
+): Promise<Response | null> {
+  for (const b of llmBackends()) {
+    try {
+      const res = await fetch(`${b.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: b.headers,
+        body: JSON.stringify(build(b)),
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (res.ok) return res
+      console.warn('llm: bad response status', res.status, 'from', b.baseUrl)
+    } catch (err) {
+      console.warn('llm: request failed for', b.baseUrl, err)
+    }
+  }
+  return null
+}
+
 const CATEGORIES = new Set(['symptom', 'finding', 'vital', 'assessment', 'other'])
 const VITAL_KEYS = ['bp', 'temp', 'pulse', 'weight', 'spo2'] as const
 
@@ -172,23 +215,15 @@ export async function structureTranscript(
   transcript: string,
   existing: { diagnosis: DiagnosisItem[]; prescription: PrescriptionItem[]; vitals: Vitals }
 ): Promise<StructuredResult | null> {
-  const baseUrl = llmBaseUrl()
-  const model = llmModel()
-  const provider = llmProvider()
-  if (!model) {
-    console.warn('llm: LLM_MODEL not set')
-    return null
-  }
   const userMsg = `EXISTING: ${JSON.stringify({
     diagnosis: existing.diagnosis.map((d) => d.text),
     prescription: existing.prescription.map((p) => p.drug),
     vitals: existing.vitals,
   })}\nTRANSCRIPT:\n${transcript}`
 
-  let res: Response
-  try {
+  const res = await llmChat((b) => {
     const body: Record<string, unknown> = {
-      model,
+      model: b.model,
       stream: false,
       temperature: 0,
       // OpenAI-compatible servers (incl. Vercel AI Gateway) use response_format.
@@ -198,24 +233,11 @@ export async function structureTranscript(
         { role: 'user', content: userMsg },
       ],
     }
-    // Ollama's native `/chat/completions` compatibility layer also honours a top-level `format`.
-    // Only send it to Ollama — hosted OpenAI-compatible servers reject unknown fields.
-    if (provider === 'ollama') body.format = RESPONSE_SCHEMA
-
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: llmHeaders(),
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60000),
-    })
-  } catch (err) {
-    console.warn('llm: request failed', err)
-    return null
-  }
-  if (!res.ok) {
-    console.warn('llm: bad response status', res.status)
-    return null
-  }
+    // Ollama also honours a top-level `format`; hosted servers reject unknown fields.
+    if (b.provider === 'ollama') body.format = RESPONSE_SCHEMA
+    return body
+  }, 60000)
+  if (!res) return null
 
   let json: { choices?: { message?: { content?: string } }[] }
   try {
