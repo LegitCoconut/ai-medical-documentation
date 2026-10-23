@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import { guard, jsonError } from '@/lib/auth'
 import { patients, visits } from '@/lib/db'
 import { serializeDoc, serializeDocs } from '@/lib/types'
-import { llmEnabled, llmBaseUrl, llmModel, llmHeaders } from '@/lib/llm'
+import { llmEnabled, llmBackends, llmChat } from '@/lib/llm'
 import type { Visit, Patient } from '@/lib/types'
 
 /**
@@ -119,39 +119,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
     }
 
-    const baseUrl = llmBaseUrl()
-    const model = llmModel()
-
-    if (!model) {
+    if (llmBackends().length === 0) {
       console.warn('summarise: LLM_MODEL not set')
       throw jsonError('AI model is not configured (LLM_MODEL)', 502)
     }
 
-    let upstreamRes: Response
-    try {
-      upstreamRes = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: llmHeaders(),
-        body: JSON.stringify({
-          model,
-          stream: false,
-          temperature: 0.3,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userMessage },
-          ],
-        }),
-        signal: AbortSignal.timeout(120_000),
-      })
-    } catch (err) {
-      console.warn('summarise: llm request failed', err)
-      throw jsonError('AI model unreachable', 502)
-    }
-
-    if (!upstreamRes.ok) {
-      console.warn('summarise: llm bad status', upstreamRes.status)
-      throw jsonError('AI model returned an error', 502)
-    }
+    const upstreamRes = await llmChat(
+      (b) => ({
+        model: b.model,
+        stream: false,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userMessage },
+        ],
+      }),
+      120_000
+    )
+    if (!upstreamRes) throw jsonError('AI model unreachable', 502)
 
     let json: { choices?: { message?: { content?: string } }[] }
     try {
