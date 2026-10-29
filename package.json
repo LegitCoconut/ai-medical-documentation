@@ -2,6 +2,7 @@
   "name": "portal",
   "version": "0.1.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "next dev",
     "dev:llm": "node scripts/dev-with-llm.mjs",
@@ -12,6 +13,7 @@
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "seed:reset": "tsx --env-file=.env.local scripts/seed.ts --reset",
     "test:extract": "tsx --env-file=.env.local scripts/test-extract.ts",
+    "eval:extract": "tsx scripts/eval-extract.ts",
     "whisper:server": "LD_LIBRARY_PATH=/usr/local/lib/ollama/cuda_v12 WHISPER_MODEL=\"${WHISPER_MODEL:-/home/rohit/Downloads/kk}\" WHISPER_DEVICE=\"${WHISPER_DEVICE:-cuda}\" WHISPER_COMPUTE_TYPE=\"${WHISPER_COMPUTE_TYPE:-float16}\" /usr/bin/python3 scripts/whisper_server.py",
     "setup:check": "node --env-file=.env.local scripts/check-llm.mjs",
     "whisper:preload": "LD_LIBRARY_PATH=/usr/local/lib/ollama/cuda_v12 WHISPER_MODEL=\"${WHISPER_MODEL:-/home/rohit/Downloads/kk}\" WHISPER_DEVICE=\"${WHISPER_DEVICE:-cuda}\" WHISPER_COMPUTE_TYPE=\"${WHISPER_COMPUTE_TYPE:-float16}\" /usr/bin/python3 scripts/preload-whisper.py"
